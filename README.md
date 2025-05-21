@@ -31,7 +31,8 @@ cargo build --release
 ## ▶️ Run the Server
 
 ```bash
-cargo run --bin fire-control
+# Default log level is warn.
+RUST_LOG=debug cargo run --bin fire-control
 ```
 
 It listens on port `8124` and logs events via `tracing`.
@@ -70,6 +71,37 @@ Expected behavior:
 * `-1` → cancels
 * `hello`, `0` → ignored
 * `5` → should fire 5 seconds later
+
+### 🖨️ Sample Server Output
+
+When the test driver runs, the server prints:
+
+```
+
+INFO  Starting fire-control... port=8124
+INFO  🚪 Listening on 0.0.0.0:8124
+INFO  🔌 Accepted connection peer=127.0.0.1:39272
+DEBUG Received raw line trimmed=10
+INFO  ➡️ Received command cmd=Fire(10.0)
+INFO  ⏳ Scheduled new firing command delay\_secs=10.0
+DEBUG Received raw line trimmed=3
+INFO  ➡️ Received command cmd=Fire(3.0)
+INFO  🆕 Replacing existing firing command delay\_secs=3.0
+DEBUG Received raw line trimmed=-1
+INFO  ➡️ Received command cmd=Cancel
+INFO  ⛔ Command cancelled
+DEBUG Received raw line trimmed=hello
+WARN  ⚠️ Invalid command: Failed to parse input as float: "hello"
+DEBUG Received raw line trimmed=0
+WARN  ⚠️ Invalid command: Delay must be positive or -1 to cancel
+DEBUG Received raw line trimmed=5
+INFO  ➡️ Received command cmd=Fire(5.0)
+INFO  ⏳ Scheduled new firing command delay\_secs=5.0
+INFO  🔌 Connection closed peer=127.0.0.1:39272
+firing now!
+INFO  🚀 Firing now! delay\_secs=5.0
+
+```
 
 ---
 
