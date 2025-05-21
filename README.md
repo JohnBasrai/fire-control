@@ -22,6 +22,8 @@ A satellite propulsion control simulator that receives asynchronous firing comma
 
 Requires Rust 1.70+ and Cargo.
 
+Built and tested on Rust 1.83.0. Code is expected to compile on Rust 1.70+, but the lock file format requires Rust 1.82+ unless regenerated.
+
 ```bash
 cargo build --release
 ````
