@@ -17,7 +17,6 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // ---
     let args = Args::parse();
     let addr = format!("127.0.0.1:{}", args.port);
     let stream = TcpStream::connect(addr.to_socket_addrs()?.next().unwrap())
@@ -25,17 +24,9 @@ async fn main() -> Result<()> {
         .context("Failed to connect to fire-control server")?;
 
     let (reader, mut writer) = stream.into_split();
-    let reader = BufReader::new(reader);
-    let mut lines = reader.lines();
 
-    let commands = [
-        "10\n",    // should be scheduled
-        "3\n",     // replaces previous
-        "-1\n",    // cancels
-        "hello\n", // invalid
-        "0\n",     // invalid
-        "5\n",     // should fire
-    ];
+    // Send test commands
+    let commands = ["10\n", "3\n", "-1\n", "hello\n", "0\n", "5\n"];
 
     for cmd in &commands {
         print!("> {}", cmd);
@@ -44,24 +35,25 @@ async fn main() -> Result<()> {
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
 
-    // Read any responses for a few seconds
-    let mut response_buf = vec![];
-    let timeout = tokio::time::sleep(Duration::from_secs(3));
-    tokio::pin!(timeout);
+    // ✅ Close the writer to signal end-of-input
+    writer.shutdown().await?;
+    println!("✅ All commands sent. Waiting for response...");
 
-    loop {
-        tokio::select! {
-            res = lines.next_line() => {
-                if let Some(line) = res? {
-                    println!("< {}", line);
-                    response_buf.push(line);
-                } else {
-                    break;
-                }
-            }
-            _ = &mut timeout => break,
-        }
+    // ✅ Attempt to read any remaining output
+    // TODO(johnb): Replace this ad-hoc sleep-based test driver with a real integration test.
+    // - Move this logic into `tests/tcp_integration.rs`
+    // - Assert that "firing now!" is received exactly once
+    // - Remove reliance on manual inspection and sleep delays
+    // - Use `BufReader::lines()` or `next_line()` once registry issues are resolved
+
+    let mut reader = BufReader::new(reader);
+    let mut buffer = String::new();
+
+    while reader.read_line(&mut buffer).await? != 0 {
+        print!("< {}", buffer);
+        buffer.clear();
     }
 
+    tokio::time::sleep(Duration::from_millis(200)).await;
     Ok(())
 }

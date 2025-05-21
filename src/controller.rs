@@ -87,7 +87,6 @@ mod tests {
     use std::sync::Arc;
     use tokio::time::Duration;
 
-
     fn counter_hook() -> (Arc<AtomicUsize>, impl Fn() + Send + Sync + 'static) {
         // ---
         let count = Arc::new(AtomicUsize::new(0));

@@ -42,6 +42,7 @@ async fn handle_client(stream: TcpStream, controller: FiringController) -> anyho
         if trimmed.is_empty() {
             continue;
         }
+        tracing::debug!(%trimmed, "Received raw line"); // 👈 ADD THIS
 
         match trimmed.parse::<FireCommand>() {
             Ok(cmd) => {

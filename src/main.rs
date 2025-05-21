@@ -12,7 +12,7 @@ use tracing::info;
 #[command(name = "fire-control")]
 #[command(about = "Satellite propulsion firing controller", version)]
 struct Cli {
-    /// Port to listen on (default: 8124)
+    /// Port to listen on
     #[arg(short, long, default_value_t = 8124)]
     port: u16,
 }
@@ -32,10 +32,9 @@ async fn main() -> Result<()> {
 }
 
 fn init_tracing() {
-    use tracing_subscriber::EnvFilter;
+    use tracing_subscriber::{fmt, EnvFilter};
 
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .with_target(false)
-        .init();
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")); // fallback to warn
+
+    fmt().with_env_filter(filter).with_target(false).init();
 }

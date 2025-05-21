@@ -1,0 +1,16 @@
+name: TODO to Issue
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  todo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Convert TODOs to Issues
+        uses: alstr/todo-to-issue-action@v5
+        with:
+          INSERT_ISSUE_URLS: "true"
+          CLOSE_ISSUES: "true"
