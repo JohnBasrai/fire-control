@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Check, Test, Format, Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🦀 Install Rust (stable)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: clippy, rustfmt
+
+      - name: 🔍 cargo fmt --check
+        run: cargo fmt --check
+
+      - name: 🧪 cargo check
+        run: cargo check
+
+      - name: ✅ cargo test
+        run: cargo test
+
+      - name: 🧼 cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
