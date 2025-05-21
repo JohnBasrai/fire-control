@@ -12,16 +12,30 @@ struct ActiveCommand {
     handle: JoinHandle<()>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FiringController {
     inner: Arc<Mutex<Option<ActiveCommand>>>,
+    fire_action: Arc<dyn Fn() + Send + Sync>,
 }
 
 impl FiringController {
     // ---
     pub fn new() -> Self {
+        // ---
+        fn default_fire() {
+            println!("firing now!");
+        }
+
+        Self::with_action(default_fire)
+    }
+
+    pub fn with_action<F>(fire_fn: F) -> Self
+    where
+        F: Fn() + Send + Sync + 'static,
+    {
         Self {
             inner: Arc::new(Mutex::new(None)),
+            fire_action: Arc::new(fire_fn),
         }
     }
 
@@ -49,9 +63,12 @@ impl FiringController {
                     info!(delay_secs, "⏳ Scheduled new firing command");
                 }
 
+                let fire_action = self.fire_action.clone(); // ownership passed to spawn
+
                 let handle = tokio::spawn(async move {
                     sleep(Duration::from_secs_f64(delay_secs)).await;
                     println!("firing now!");
+                    fire_action(); // actual call
                     info!(delay_secs, "🚀 Firing now!");
                 });
 
@@ -63,62 +80,65 @@ impl FiringController {
 
 #[cfg(test)]
 mod tests {
-    // ---
     use super::*;
     use crate::command::FireCommand;
-    use anyhow::Result;
-    use tokio::time::{timeout, Duration};
+    use anyhow::{ensure, Result};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use tokio::time::Duration;
+
+
+    fn counter_hook() -> (Arc<AtomicUsize>, impl Fn() + Send + Sync + 'static) {
+        // ---
+        let count = Arc::new(AtomicUsize::new(0));
+        let cloned = count.clone();
+        let hook = move || {
+            cloned.fetch_add(1, Ordering::SeqCst);
+        };
+        (count, hook)
+    }
 
     #[tokio::test]
     async fn fires_once() -> Result<()> {
         // ---
-        let controller = FiringController::new();
-        controller.handle_command(FireCommand::Fire(0.1)).await;
+        let (count, hook) = counter_hook();
+        let controller = FiringController::with_action(hook);
 
-        // Wait for it to fire
-        timeout(Duration::from_secs(1), async {
-            tokio::time::sleep(Duration::from_millis(150)).await;
-        })
-        .await?;
+        controller.handle_command(FireCommand::Fire(0.05)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
 
+        ensure!(count.load(Ordering::SeqCst) == 1, "Expected 1 firing");
         Ok(())
     }
 
     #[tokio::test]
     async fn cancel_prevents_firing() -> Result<()> {
         // ---
-        let controller = FiringController::new();
+        let (count, hook) = counter_hook();
+        let controller = FiringController::with_action(hook);
+
         controller.handle_command(FireCommand::Fire(0.2)).await;
         controller.handle_command(FireCommand::Cancel).await;
-
-        // Wait longer than original delay
         tokio::time::sleep(Duration::from_millis(300)).await;
-        // No panic = success
+
+        ensure!(count.load(Ordering::SeqCst) == 0, "Expected no firing");
         Ok(())
     }
 
     #[tokio::test]
     async fn overwrite_cancels_first() -> Result<()> {
         // ---
-        let controller = FiringController::new();
+        let (count, hook) = counter_hook();
+        let controller = FiringController::with_action(hook);
+
         controller.handle_command(FireCommand::Fire(0.5)).await;
         controller.handle_command(FireCommand::Fire(0.1)).await;
-
-        // Wait enough for second to fire, but not first
         tokio::time::sleep(Duration::from_millis(300)).await;
-        Ok(())
-    }
 
-    #[tokio::test]
-    #[ignore] // Placeholder for future enhancement
-    async fn handles_invalid_input_format_gracefully() -> Result<()> {
-        // ---
-        // This test should eventually simulate invalid inputs via TCP
-        // or expose a lower-level parsing hook that can be fuzzed.
-        //
-        // For now, `FiringController` doesn't deal with raw strings,
-        // so this is best handled in integration tests or TCP layer.
-
+        ensure!(
+            count.load(Ordering::SeqCst) == 1,
+            "Expected only one firing (latest)"
+        );
         Ok(())
     }
 }
