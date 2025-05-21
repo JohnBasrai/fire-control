@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  issues: write
+
 jobs:
   todo:
     runs-on: ubuntu-latest
