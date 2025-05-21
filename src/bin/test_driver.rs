@@ -39,12 +39,7 @@ async fn main() -> Result<()> {
     writer.shutdown().await?;
     println!("✅ All commands sent. Waiting for response...");
 
-    // ✅ Attempt to read any remaining output
-    // TODO(johnb): Replace this ad-hoc sleep-based test driver with a real integration test.
-    // - Move this logic into `tests/tcp_integration.rs`
-    // - Assert that "firing now!" is received exactly once
-    // - Remove reliance on manual inspection and sleep delays
-    // - Use `BufReader::lines()` or `next_line()` once registry issues are resolved
+    // TODO(johnb): Replace this test driver with an integration test in tests/tcp_integration.rs (firing once, no sleeps, use next_line)
 
     let mut reader = BufReader::new(reader);
     let mut buffer = String::new();
