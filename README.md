@@ -39,12 +39,6 @@ RUST_LOG=debug cargo run --bin fire-control
 
 It listens on port `8124` and logs events via `tracing`.
 
-Use `RUST_LOG=debug` to see full logs:
-
-```bash
-RUST_LOG=debug cargo run --bin fire-control
-```
-
 ---
 
 ## 🧪 Test Driver
