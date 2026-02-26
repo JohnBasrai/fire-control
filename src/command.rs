@@ -35,7 +35,8 @@ mod tests {
     #[test]
     fn parses_valid_fire_commands() -> Result<()> {
         ensure!(FireCommand::from_str("10")? == FireCommand::Fire(10.0));
-        ensure!(FireCommand::from_str("3.14")? == FireCommand::Fire(3.14));
+
+        ensure!(FireCommand::from_str("13.1280")? == FireCommand::Fire(13.128));
         ensure!(FireCommand::from_str("  2.5 ")? == FireCommand::Fire(2.5));
         Ok(())
     }
